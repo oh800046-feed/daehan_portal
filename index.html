@@ -330,11 +330,10 @@ let nextId=500;
 const SUPABASE_URL = "https://ejghcmxerswoyiyxpuro.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KcEH2eD-PcrQg642o1j4Bw_sKJLIOSv";
 
-if(
-  !SUPABASE_URL.startsWith("https://") ||
-  !SUPABASE_URL.includes(".supabase.co") ||
-  !SUPABASE_ANON_KEY.startsWith("eyJ")
-){
+const validSupabaseUrl = SUPABASE_URL.startsWith("https://") && SUPABASE_URL.includes(".supabase.co");
+const validSupabaseKey = SUPABASE_ANON_KEY.startsWith("eyJ") || SUPABASE_ANON_KEY.startsWith("sb_publishable_");
+
+if(!validSupabaseUrl || !validSupabaseKey){
   alert("Supabase URL 또는 anon key를 아직 제대로 넣지 않았습니다. Project Settings → API에서 Project URL과 anon public key를 넣어주세요.");
 }
 
