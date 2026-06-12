@@ -72,8 +72,13 @@
   .panel-head .pdesc{font-size:calc(11px*var(--scale));color:var(--muted)}
   .panel-head .pcount{margin-left:auto;font-size:calc(11px*var(--scale));font-weight:700;color:var(--blue);
     background:var(--blue-soft);padding:2px 9px;border-radius:999px}
-  .grp-label{font-size:calc(11.5px*var(--scale));font-weight:700;color:var(--muted);text-transform:uppercase;
+  .grp-label{display:flex;align-items:center;gap:6px;font-size:calc(11.5px*var(--scale));font-weight:700;color:var(--muted);text-transform:uppercase;
     letter-spacing:.5px;margin:calc(11px*var(--scale)) 0 calc(8px*var(--scale))}
+  .ghandle{cursor:grab;color:var(--muted);font-size:calc(12px*var(--scale));line-height:1;letter-spacing:1px;opacity:.55;transition:.15s}
+  .ghandle:hover{opacity:1;color:var(--blue)}
+  .ghandle:active{cursor:grabbing}
+  .group-wrap.group-dragging{opacity:.45}
+  .group-wrap.group-drop{outline:2px dashed var(--blue);outline-offset:4px;border-radius:12px}
   .icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(120px*var(--scale)),1fr));
     gap:calc(11px*var(--scale))}
 
@@ -465,9 +470,9 @@ function render(){
       const list=g.items.filter(it=>!qq||(it.name+it.desc).toLowerCase().includes(qq));
       secCount+=list.length;
       if(list.length===0&&qq)return;
-      const lab=g.label?'<div class="grp-label">'+g.label+'</div>':"";
+      const lab=g.label?'<div class="grp-label"><span class="ghandle" draggable="true" title="그룹 순서 이동">⠿</span><span>'+g.label+'</span></div>':"";
       const add=!qq?'<a class="tile tile-add" onclick="openAdd(\''+sec.id+'\','+gi+')"><span class="plus">+</span><div class="tdesc" style="color:inherit">추가</div></a>':"";
-      gHTML+=lab+'<div class="icons" data-sec="'+sec.id+'" data-grp="'+gi+'">'+list.map(tileHTML).join("")+add+'</div>';
+      gHTML+='<div class="group-wrap" data-sec="'+sec.id+'" data-grp="'+gi+'">'+lab+'<div class="icons" data-sec="'+sec.id+'" data-grp="'+gi+'">'+list.map(tileHTML).join("")+add+'</div></div>';
     });
     if(secCount===0&&qq)return;
     shown+=secCount;
@@ -480,7 +485,7 @@ function render(){
   });
   board.classList.toggle("edit-on",editMode);
   empty.classList.toggle("show",shown===0&&!!qq);
-  bindDrag();bindSectionDrag();bindTooltip();
+  bindDrag();bindGroupDrag();bindSectionDrag();bindTooltip();
 }
 
 /* ── 아이콘 드래그 ── */
@@ -523,6 +528,53 @@ function moveItemToZone(fromId,secId,grpIdx){
   const item=SECTIONS[a.s].groups[a.g].items.splice(a.i,1)[0];
   const sIdx=SECTIONS.findIndex(s=>s.id===secId);
   SECTIONS[sIdx].groups[grpIdx].items.push(item);
+  render();
+  saveRemoteState();
+}
+
+/* ── 하위 그룹 드래그 ── */
+let dragGroup = null;
+function bindGroupDrag(){
+  document.querySelectorAll(".ghandle").forEach(handle=>{
+    const wrap = handle.closest(".group-wrap");
+    handle.addEventListener("dragstart",e=>{
+      e.stopPropagation();
+      dragGroup = { secId: wrap.dataset.sec, grpIdx: +wrap.dataset.grp };
+      wrap.classList.add("group-dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain","group:"+dragGroup.secId+":"+dragGroup.grpIdx);
+    });
+    handle.addEventListener("dragend",()=>{
+      document.querySelectorAll(".group-wrap").forEach(g=>g.classList.remove("group-dragging","group-drop"));
+      dragGroup = null;
+    });
+  });
+
+  document.querySelectorAll(".group-wrap").forEach(wrap=>{
+    wrap.addEventListener("dragover",e=>{
+      if(!dragGroup || wrap.dataset.sec !== dragGroup.secId) return;
+      e.preventDefault();
+      if(+wrap.dataset.grp !== dragGroup.grpIdx) wrap.classList.add("group-drop");
+    });
+    wrap.addEventListener("dragleave",()=>wrap.classList.remove("group-drop"));
+    wrap.addEventListener("drop",e=>{
+      if(!dragGroup || wrap.dataset.sec !== dragGroup.secId) return;
+      e.preventDefault();
+      const toIdx = +wrap.dataset.grp;
+      const from = dragGroup;
+      document.querySelectorAll(".group-wrap").forEach(g=>g.classList.remove("group-dragging","group-drop"));
+      dragGroup = null;
+      moveGroup(from.secId, from.grpIdx, toIdx);
+    });
+  });
+}
+
+function moveGroup(secId, fromIdx, toIdx){
+  if(fromIdx === toIdx) return;
+  const section = SECTIONS.find(s=>s.id===secId);
+  if(!section || !section.groups[fromIdx] || !section.groups[toIdx]) return;
+  const group = section.groups.splice(fromIdx,1)[0];
+  section.groups.splice(fromIdx < toIdx ? toIdx - 1 : toIdx,0,group);
   render();
   saveRemoteState();
 }
