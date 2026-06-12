@@ -70,6 +70,13 @@
   .pdot{width:calc(10px*var(--scale));height:calc(10px*var(--scale));border-radius:3px;flex:none}
   .panel-head h2{font-size:calc(15px*var(--scale));font-weight:700;letter-spacing:-.3px}
   .panel-head .pdesc{font-size:calc(11px*var(--scale));color:var(--muted)}
+  .panel-head .sec-copy{min-width:0;flex:1}
+  .sec-title-edit input,.sec-desc-edit input{width:100%;border:1px solid transparent;background:transparent;color:inherit;
+    font:inherit;border-radius:6px;padding:2px 4px;outline:none}
+  .sec-title-edit input{font-weight:700;font-size:calc(15px*var(--scale));letter-spacing:-.3px}
+  .sec-desc-edit input{font-size:calc(11px*var(--scale));color:var(--muted)}
+  .edit-on .sec-title-edit input,.edit-on .sec-desc-edit input{border-color:var(--line);background:var(--bg)}
+  .sec-title-edit input:focus,.sec-desc-edit input:focus{border-color:var(--blue);background:var(--card);color:var(--ink)}
   .panel-head .pcount{margin-left:auto;font-size:calc(11px*var(--scale));font-weight:700;color:var(--blue);
     background:var(--blue-soft);padding:2px 9px;border-radius:999px}
   .grp-label{display:flex;align-items:center;gap:6px;font-size:calc(11.5px*var(--scale));font-weight:700;color:var(--muted);text-transform:uppercase;
@@ -461,6 +468,14 @@ function tileHTML(it){
     +statusTag(it.status)+statusSelect(it)+'</a>';
 }
 
+function sectionCopy(sec){
+  if(!editMode){
+    return '<h2>'+esc(sec.title)+'</h2><div class="pdesc">'+esc(sec.desc)+'</div>';
+  }
+  return '<h2 class="sec-title-edit"><input value="'+esc(sec.title)+'" onclick="ev(event)" onchange="renameSection(\''+sec.id+'\',this.value)"></h2>'
+    +'<div class="pdesc sec-desc-edit"><input value="'+esc(sec.desc)+'" placeholder="설명 입력" onclick="ev(event)" onchange="redescSection(\''+sec.id+'\',this.value)"></div>';
+}
+
 function render(){
   board.innerHTML="";
   const qq=searchQ.trim().toLowerCase();let shown=0;
@@ -471,7 +486,7 @@ function render(){
       secCount+=list.length;
       if(list.length===0&&qq)return;
       const lab=g.label?'<div class="grp-label"><span class="ghandle" draggable="true" title="그룹 순서 이동">⠿</span><span>'+g.label+'</span></div>':"";
-      const add=!qq?'<a class="tile tile-add" onclick="openAdd(\''+sec.id+'\','+gi+')"><span class="plus">+</span><div class="tdesc" style="color:inherit">추가</div></a>':"";
+      const add="";
       gHTML+='<div class="group-wrap" data-sec="'+sec.id+'" data-grp="'+gi+'">'+lab+'<div class="icons" data-sec="'+sec.id+'" data-grp="'+gi+'">'+list.map(tileHTML).join("")+add+'</div></div>';
     });
     if(secCount===0&&qq)return;
@@ -479,7 +494,7 @@ function render(){
     const p=document.createElement("div");p.className="panel";p.dataset.sec=sec.id;
     p.innerHTML='<div class="panel-head"><span class="shandle" draggable="true" title="구획 순서 이동">⠿</span>'
       +'<span class="pdot" style="background:'+sec.dot+'"></span>'
-      +'<div><h2>'+sec.title+'</h2><div class="pdesc">'+sec.desc+'</div></div>'
+      +'<div class="sec-copy">'+sectionCopy(sec)+'</div>'
       +'<span class="pcount">'+secCount+'</span></div>'+gHTML;
     board.appendChild(p);
   });
@@ -624,6 +639,7 @@ function moveTip(e){let x=e.clientX+14,y=e.clientY+18;const w=urltip.offsetWidth
 function ev(e){e.preventDefault();e.stopPropagation();}
 function go(e,id){if(editMode){e.preventDefault();return false;}const it=findItem(id);if(!it||!it.url){e.preventDefault();return false;}return true;}
 function findItem(id){for(const s of SECTIONS)for(const g of s.groups){const f=g.items.find(i=>i.id===id);if(f)return f;}return null;}
+function findSection(id){return SECTIONS.find(s=>s.id===id);}
 function fav(e,id){
   e.preventDefault();
   e.stopPropagation();
@@ -657,6 +673,22 @@ function redesc(id,v){
   const it = findItem(id);
   if(it){
     it.desc = v.trim();
+    saveRemoteState();
+  }
+}
+
+function renameSection(id,v){
+  const sec = findSection(id);
+  if(sec){
+    sec.title = v.trim() || sec.title;
+    saveRemoteState();
+  }
+}
+
+function redescSection(id,v){
+  const sec = findSection(id);
+  if(sec){
+    sec.desc = v.trim();
     saveRemoteState();
   }
 }
