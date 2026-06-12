@@ -104,11 +104,18 @@
   .turl input{width:100%;text-align:center;border:1px dashed var(--line);background:var(--bg);color:var(--blue);
     font:inherit;font-size:calc(10px*var(--scale));line-height:1.35;border-radius:7px;padding:3px 5px}
   .turl input:focus{border-color:var(--blue);outline:none;background:var(--card);color:var(--ink)}
+  .tstatus-edit{display:none;width:100%}
+  .edit-on .tstatus-edit{display:block}
+  .tstatus-edit select{width:100%;text-align:center;border:1px dashed var(--line);background:var(--bg);color:var(--ink);
+    font:inherit;font-size:calc(10.5px*var(--scale));font-weight:700;border-radius:7px;padding:3px 5px;outline:none}
+  .tstatus-edit select:focus{border-color:var(--blue);background:var(--card)}
   .tstatus{font-size:calc(9.5px*var(--scale));font-weight:700;padding:2px calc(7px*var(--scale));border-radius:999px}
   .st-done{background:#dcfce7;color:#15803d}
   .st-review{background:#fef3c7;color:#b45309}
+  .st-pause{background:#fee2e2;color:#dc2626}
   html[data-theme="dark"] .st-done{background:#0f3320;color:#4ade80}
   html[data-theme="dark"] .st-review{background:#3a2c0a;color:#fbbf24}
+  html[data-theme="dark"] .st-pause{background:#3a1116;color:#f87171}
 
   .grip{position:absolute;top:calc(7px*var(--scale));left:50%;transform:translateX(-50%);
     color:var(--muted);opacity:0;transition:.15s;cursor:grab;font-size:calc(13px*var(--scale));letter-spacing:1px;line-height:1}
@@ -307,7 +314,7 @@ let SECTIONS=[
     ]},
     {label:"기획관리팀",items:[
       {id:202,name:"기획관리",desc:"기획 자료·관리 지표",url:"",icon:"기획",img:"",color:"#3949c4",status:"검토중",fav:false},
-      {id:203,name:"축산뉴스 모니터링",desc:"뉴스 수집·게시용 HTML 저장",url:"http://localhost:5050/",icon:"뉴스",img:"",color:"#1565a8",status:"검토중",fav:false},
+      {id:203,name:"축산뉴스 모니터링",desc:"뉴스 HTML 업로드·게시",url:"./livestock-news/",icon:"뉴스",img:"",color:"#1565a8",status:"검토중",fav:false},
     ]}
   ]},
   {id:"meetings",title:"회의체",desc:"정기 회의·의사결정 자료",dot:"#0a2e6b",groups:[
@@ -319,11 +326,15 @@ let SECTIONS=[
 ];
 let nextId=500;
 const COLORS=["#06204a","#0b46c2","#073191","#1077ad","#0e7c78","#3949c4","#6d28d9","#b45309","#15803d","#b91c1c"];
-const STATUS_CLASS={"완료":"st-done","검토중":"st-review"};
+const STATUSES=["검토중","중단","완료"];
+const STATUS_CLASS={"완료":"st-done","검토중":"st-review","중단":"st-pause"};
 let editMode=false,searchQ="",pickedColor=COLORS[0],imgTargetId=null;
 const board=document.getElementById("board"),empty=document.getElementById("empty"),urltip=document.getElementById("urltip");
 
 function statusTag(s){const c=STATUS_CLASS[s]||"st-review";return s?'<span class="tstatus '+c+'">'+s+'</span>':"";}
+function statusSelect(it){return '<div class="tstatus-edit"><select onclick="ev(event)" onchange="restatus('+it.id+',this.value)">'
+  +STATUSES.map(s=>'<option value="'+s+'" '+(it.status===s?'selected':'')+'>'+s+'</option>').join("")
+  +'</select></div>';}
 function iconInner(it){return it.img?'<img src="'+it.img+'" alt="">':it.icon;}
 function esc(s){return (s||"").replace(/"/g,"&quot;");}
 
@@ -340,7 +351,7 @@ function tileHTML(it){
     +'<div class="tname"><input value="'+esc(it.name)+'" onclick="ev(event)" onchange="rename('+it.id+',this.value)"></div>'
     +'<div class="tdesc"><input value="'+esc(it.desc)+'" placeholder="설명 입력" onclick="ev(event)" onchange="redesc('+it.id+',this.value)"></div>'
     +'<div class="turl"><input value="'+esc(it.url||"")+'" placeholder="연결 주소(URL)" onclick="ev(event)" onchange="reurl('+it.id+',this.value)"></div>'
-    +statusTag(it.status)+'</a>';
+    +statusTag(it.status)+statusSelect(it)+'</a>';
 }
 
 function render(){
@@ -443,6 +454,7 @@ function del(e,id){e.preventDefault();e.stopPropagation();if(confirm("삭제할�
 function rename(id,v){const it=findItem(id);if(it)it.name=v.trim()||it.name;}
 function redesc(id,v){const it=findItem(id);if(it)it.desc=v.trim();}
 function reurl(id,v){const it=findItem(id);if(it){it.url=v.trim();render();}}
+function restatus(id,v){const it=findItem(id);if(it){it.status=STATUSES.includes(v)?v:"검토중";render();}}
 
 /* ── 이미지 삽입 ── */
 const imgInput=document.getElementById("imgInput");
