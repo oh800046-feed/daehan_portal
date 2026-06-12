@@ -330,6 +330,14 @@ let nextId=500;
 const SUPABASE_URL = "https://daehanfeed-portal.vercel.app/";
 const SUPABASE_ANON_KEY = "sb_publishable_KcEH2eD-PcrQg642o1j4Bw_sKJLIOSv";
 
+if(
+  !SUPABASE_URL.startsWith("https://") ||
+  !SUPABASE_URL.includes(".supabase.co") ||
+  !SUPABASE_ANON_KEY.startsWith("eyJ")
+){
+  alert("Supabase URL 또는 anon key를 아직 제대로 넣지 않았습니다. Project Settings → API에서 Project URL과 anon public key를 넣어주세요.");
+}
+
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let applyingRemote = false;
@@ -356,8 +364,12 @@ async function loadRemoteState(){
     .single();
 
   if(error){
-    console.error("Supabase 불러오기 실패:", error);
-    alert("Supabase 불러오기 실패: " + error.message);
+    console.error("Supabase 불러오기 실패 전체 에러:", error);
+    alert(
+      "Supabase 불러오기 실패\n\n" +
+      "code: " + (error.code || "없음") + "\n" +
+      "message: " + (error.message || JSON.stringify(error))
+    );
     return;
   }
 
@@ -382,8 +394,12 @@ async function saveRemoteState(force){
     });
 
   if(error){
-    console.error("Supabase 저장 실패:", error);
-    alert("Supabase 저장 실패: " + error.message);
+    console.error("Supabase 저장 실패 전체 에러:", error);
+    alert(
+      "Supabase 저장 실패\n\n" +
+      "code: " + (error.code || "없음") + "\n" +
+      "message: " + (error.message || JSON.stringify(error))
+    );
   }
 }
 
