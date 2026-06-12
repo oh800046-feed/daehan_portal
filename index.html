@@ -99,6 +99,11 @@
     font:inherit;font-size:calc(10.5px*var(--scale));line-height:1.35;border-radius:6px;padding:1px}
   .tdesc input:hover{border-color:var(--line)}
   .tdesc input:focus{border-color:var(--blue);background:var(--bg);outline:none;color:var(--ink)}
+  .turl{display:none;width:100%;position:relative}
+  .edit-on .turl{display:block}
+  .turl input{width:100%;text-align:center;border:1px dashed var(--line);background:var(--bg);color:var(--blue);
+    font:inherit;font-size:calc(10px*var(--scale));line-height:1.35;border-radius:7px;padding:3px 5px}
+  .turl input:focus{border-color:var(--blue);outline:none;background:var(--card);color:var(--ink)}
   .tstatus{font-size:calc(9.5px*var(--scale));font-weight:700;padding:2px calc(7px*var(--scale));border-radius:999px}
   .st-done{background:#dcfce7;color:#15803d}
   .st-review{background:#fef3c7;color:#b45309}
@@ -334,6 +339,7 @@ function tileHTML(it){
     +'<div class="ico" style="background:'+it.color+'">'+iconInner(it)+'</div>'
     +'<div class="tname"><input value="'+esc(it.name)+'" onclick="ev(event)" onchange="rename('+it.id+',this.value)"></div>'
     +'<div class="tdesc"><input value="'+esc(it.desc)+'" placeholder="설명 입력" onclick="ev(event)" onchange="redesc('+it.id+',this.value)"></div>'
+    +'<div class="turl"><input value="'+esc(it.url||"")+'" placeholder="연결 주소(URL)" onclick="ev(event)" onchange="reurl('+it.id+',this.value)"></div>'
     +statusTag(it.status)+'</a>';
 }
 
@@ -436,6 +442,7 @@ function fav(e,id){e.preventDefault();e.stopPropagation();const it=findItem(id);
 function del(e,id){e.preventDefault();e.stopPropagation();if(confirm("삭제할까요?")){SECTIONS.forEach(s=>s.groups.forEach(g=>g.items=g.items.filter(i=>i.id!==id)));render();}}
 function rename(id,v){const it=findItem(id);if(it)it.name=v.trim()||it.name;}
 function redesc(id,v){const it=findItem(id);if(it)it.desc=v.trim();}
+function reurl(id,v){const it=findItem(id);if(it){it.url=v.trim();render();}}
 
 /* ── 이미지 삽입 ── */
 const imgInput=document.getElementById("imgInput");
