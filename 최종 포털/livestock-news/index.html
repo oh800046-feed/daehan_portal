@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>축산뉴스 모니터링</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #070d1a;
+      --panel: #0e1830;
+      --card: #111d38;
+      --ink: #e8eefb;
+      --muted: #93a3c2;
+      --line: #21304f;
+      --blue: #2563eb;
+      --gold: #f5a623;
+      --green: #37b26c;
+      --red: #ef4444;
+      --radius: 14px;
+      --font: "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      color: var(--ink);
+      background: radial-gradient(circle at top left, rgba(37,99,235,.18), transparent 34%), var(--bg);
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(7,13,26,.9);
+      backdrop-filter: blur(12px);
+    }
+
+    .back {
+      color: #cfe0ff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 8px 11px;
+      background: rgba(255,255,255,.04);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -0.4px;
+    }
+
+    .sub {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .spacer { flex: 1; }
+
+    .mode {
+      display: flex;
+      gap: 4px;
+      padding: 3px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.08);
+    }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .mode button,
+    .btn {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 8px 12px;
+      color: var(--ink);
+      background: var(--card);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .mode button {
+      border-color: transparent;
+      background: transparent;
+    }
+
+    .mode button.on,
+    .btn.primary {
+      color: #fff;
+      background: var(--blue);
+      border-color: var(--blue);
+    }
+
+    main {
+      width: min(1280px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 20px 0 38px;
+    }
+
+    .notice {
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: var(--muted);
+      background: rgba(17,29,56,.72);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .notice strong { color: var(--gold); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(14,24,48,.94);
+      box-shadow: 0 10px 28px rgba(0,0,0,.28);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .panel-body {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 10px 11px;
+      color: var(--ink);
+      background: #0a1326;
+      outline: none;
+      font: inherit;
+      font-size: 13px;
+    }
+
+    textarea {
+      min-height: 410px;
+      resize: vertical;
+      font-family: Consolas, "Courier New", monospace;
+      line-height: 1.55;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: var(--blue);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tabs {
+      display: none;
+      gap: 6px;
+      padding: 12px 16px 0;
+      background: rgba(14,24,48,.94);
+    }
+
+    body.admin .tabs { display: flex; }
+
+    .tab {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 8px 12px;
+      color: var(--muted);
+      background: #0a1326;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .tab.on {
+      color: #fff;
+      border-color: var(--blue);
+      background: var(--blue);
+    }
+
+    .status {
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .status.ok { color: var(--green); }
+    .status.err { color: #fb7185; }
+
+    .preview-wrap {
+      min-height: 620px;
+      background: #fff;
+    }
+
+    .editor-wrap {
+      display: none;
+      padding: 16px;
+      background: rgba(14,24,48,.94);
+    }
+
+    body.admin.editing .preview-wrap { display: none; }
+    body.admin.editing .editor-wrap { display: block; }
+
+    iframe {
+      display: block;
+      width: 100%;
+      height: 620px;
+      border: 0;
+      background: #fff;
+    }
+
+    .admin-only { display: none; }
+    body.admin .admin-only { display: block; }
+    body.admin .admin-grid { display: grid; }
+    .admin-grid { display: none; }
+    body.admin .viewer-only { display: none; }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-row input[type="color"] {
+      width: 44px;
+      height: 38px;
+      padding: 4px;
+    }
+
+    @media (max-width: 920px) {
+      header { align-items: flex-start; flex-wrap: wrap; }
+      .layout { grid-template-columns: 1fr; }
+      iframe { height: 560px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="back" href="../">← 포털</a>
+    <div>
+      <h1>축산뉴스 모니터링</h1>
+      <p class="sub">HTML 업로드 기반 뉴스 게시 화면</p>
+    </div>
+    <div class="spacer"></div>
+    <div class="mode">
+      <button id="viewModeBtn" class="on" type="button">보기</button>
+      <button id="adminModeBtn" type="button">업로드 관리</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="notice" id="storageNotice">
+      현재는 <strong>로컬 테스트 저장</strong>으로 작동합니다. Supabase URL과 anon key를 입력하면 모든 사용자가 같은 게시물을 볼 수 있습니다.
+    </div>
+
+    <div class="layout">
+      <aside class="panel admin-only admin-grid">
+        <div class="panel-head">
+          <h2>게시 관리</h2>
+        </div>
+        <div class="panel-body">
+          <div class="field">
+            <label for="postTitle">게시 제목</label>
+            <input id="postTitle" placeholder="예: 주간 뉴스 리포트 (2026-06-01 ~ 2026-06-07)" />
+          </div>
+          <div class="field">
+            <label for="htmlFile">HTML 파일 업로드</label>
+            <input id="htmlFile" type="file" accept=".html,.htm,text/html" />
+          </div>
+          <div class="actions">
+            <button class="btn" id="loadFileBtn" type="button">업로드 반영</button>
+            <button class="btn primary" id="publishBtn" type="button">게시 저장</button>
+          </div>
+          <div class="field">
+            <label>미리보기 글자색</label>
+            <div class="color-row">
+              <input id="textColor" type="color" value="#0b63ce" />
+              <button class="btn" id="applyColorBtn" type="button">선택 글자색 적용</button>
+            </div>
+          </div>
+          <div class="status" id="adminStatus"></div>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 id="previewTitle">게시된 뉴스</h2>
+        </div>
+        <div class="tabs">
+          <button class="tab on" id="previewTab" type="button">게시 미리보기</button>
+          <button class="tab" id="editorTab" type="button">HTML 수정</button>
+        </div>
+        <div class="editor-wrap">
+          <div class="field">
+            <label for="htmlEditor">HTML 본문 수정</label>
+            <textarea id="htmlEditor" spellcheck="false"></textarea>
+          </div>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn" id="refreshPreviewBtn" type="button">수정내용 미리보기 반영</button>
+          </div>
+        </div>
+        <div class="preview-wrap">
+          <iframe id="previewFrame" title="축산뉴스 게시 미리보기"></iframe>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://ejghcmxerswoyiyxpuro.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_KcEH2eD-PcrQg642o1j4Bw_sKJLIOSv";
+    const TABLE_NAME = "livestock_news_posts";
+    const LOCAL_KEY = "daehanfeed_livestock_news_post";
+
+    const hasSupabaseConfig = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase);
+    const db = hasSupabaseConfig ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+    const defaultHtml = `
+      <main style="font-family:Arial,'Malgun Gothic',sans-serif;color:#111827;line-height:1.7;padding:26px;">
+        <h2 style="margin:0 0 18px;font-size:24px;">게시된 축산뉴스가 없습니다.</h2>
+        <p style="color:#667085;">업로드 관리에서 뉴스 HTML을 올린 뒤 게시 저장을 눌러주세요.</p>
+      </main>
+    `;
+
+    function setStatus(message, type = "") {
+      const el = document.getElementById("adminStatus");
+      el.textContent = message || "";
+      el.className = `status ${type}`;
+    }
+
+    function normalizePost(post) {
+      return {
+        title: post && post.title ? post.title : "축산뉴스 모니터링",
+        payload: {
+          html: post && post.payload && post.payload.html ? post.payload.html : defaultHtml,
+          updatedAt: post && post.payload && post.payload.updatedAt ? post.payload.updatedAt : "",
+        },
+      };
+    }
+
+    async function loadPost() {
+      if (db) {
+        const { data, error } = await db
+          .from(TABLE_NAME)
+          .select("title,payload,updated_at")
+          .eq("status", "published")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error) throw error;
+        return normalizePost(data);
+      }
+
+      try {
+        return normalizePost(JSON.parse(localStorage.getItem(LOCAL_KEY)));
+      } catch (error) {
+        localStorage.removeItem(LOCAL_KEY);
+        return normalizePost(null);
+      }
+    }
+
+    async function savePost(post) {
+      const payload = {
+        html: post.html || defaultHtml,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (db) {
+        const { error } = await db
+          .from(TABLE_NAME)
+          .insert({
+            title: post.title || "축산뉴스 모니터링",
+            payload,
+            status: "published",
+          });
+        if (error) throw error;
+        return;
+      }
+
+      localStorage.setItem(LOCAL_KEY, JSON.stringify({
+        title: post.title || "축산뉴스 모니터링",
+        payload,
+      }));
+    }
+
+    function renderPreview(html, editable) {
+      const frame = document.getElementById("previewFrame");
+      const doc = frame.contentDocument || frame.contentWindow.document;
+      doc.open();
+      doc.write(html || defaultHtml);
+      doc.close();
+
+      if (editable) {
+        doc.designMode = "on";
+        doc.body.setAttribute("contenteditable", "true");
+      } else {
+        doc.designMode = "off";
+        doc.body.removeAttribute("contenteditable");
+      }
+
+      doc.querySelectorAll("a[href]").forEach((link) => {
+        link.setAttribute("target", "_blank");
+        link.setAttribute("rel", "noopener noreferrer");
+      });
+
+      doc.addEventListener("click", (event) => {
+        const link = event.target.closest("a[href]");
+        if (!link || editable) return;
+        event.preventDefault();
+        window.open(link.href, "_blank", "noopener,noreferrer");
+      });
+    }
+
+    function syncEditorFromPreview() {
+      const frame = document.getElementById("previewFrame");
+      const doc = frame.contentDocument || frame.contentWindow.document;
+      document.getElementById("htmlEditor").value = doc.documentElement.outerHTML;
+    }
+
+    function setAdminTab(tab) {
+      const editing = tab === "edit";
+      if (editing) {
+        syncEditorFromPreview();
+      } else {
+        renderPreview(document.getElementById("htmlEditor").value || defaultHtml, true);
+      }
+      document.body.classList.toggle("editing", editing);
+      document.getElementById("previewTab").classList.toggle("on", !editing);
+      document.getElementById("editorTab").classList.toggle("on", editing);
+    }
+
+    async function refreshFromStorage() {
+      const post = await loadPost();
+      document.getElementById("previewTitle").textContent = post.title;
+      document.getElementById("postTitle").value = post.title;
+      document.getElementById("htmlEditor").value = post.payload.html;
+      renderPreview(post.payload.html, document.body.classList.contains("admin"));
+    }
+
+    function setMode(mode) {
+      const isAdmin = mode === "admin";
+      document.body.classList.toggle("admin", isAdmin);
+      document.body.classList.remove("editing");
+      document.getElementById("viewModeBtn").classList.toggle("on", !isAdmin);
+      document.getElementById("adminModeBtn").classList.toggle("on", isAdmin);
+      renderPreview(document.getElementById("htmlEditor").value || defaultHtml, isAdmin);
+      document.getElementById("previewTab").classList.add("on");
+      document.getElementById("editorTab").classList.remove("on");
+    }
+
+    document.getElementById("viewModeBtn").addEventListener("click", () => setMode("view"));
+    document.getElementById("adminModeBtn").addEventListener("click", () => setMode("admin"));
+    document.getElementById("previewTab").addEventListener("click", () => setAdminTab("preview"));
+    document.getElementById("editorTab").addEventListener("click", () => setAdminTab("edit"));
+
+    document.getElementById("loadFileBtn").addEventListener("click", async () => {
+      const file = document.getElementById("htmlFile").files[0];
+      if (!file) {
+        setStatus("업로드할 HTML 파일을 선택해 주세요.", "err");
+        return;
+      }
+
+      const html = await file.text();
+      const title = document.getElementById("postTitle");
+      if (!title.value.trim()) title.value = file.name.replace(/\.(html?|HTML?)$/, "");
+      document.getElementById("htmlEditor").value = html;
+      renderPreview(html, true);
+      setStatus(`${file.name} 업로드 완료. 확인 후 게시 저장을 눌러주세요.`, "ok");
+    });
+
+    document.getElementById("refreshPreviewBtn").addEventListener("click", () => {
+      renderPreview(document.getElementById("htmlEditor").value, true);
+      document.body.classList.remove("editing");
+      document.getElementById("previewTab").classList.add("on");
+      document.getElementById("editorTab").classList.remove("on");
+      setStatus("수정 내용이 미리보기에 반영되었습니다.", "ok");
+    });
+
+    document.getElementById("applyColorBtn").addEventListener("click", () => {
+      const frame = document.getElementById("previewFrame");
+      const doc = frame.contentDocument || frame.contentWindow.document;
+      frame.contentWindow.focus();
+      doc.execCommand("foreColor", false, document.getElementById("textColor").value);
+      syncEditorFromPreview();
+      setStatus("선택한 글자색을 적용했습니다.", "ok");
+    });
+
+    document.getElementById("publishBtn").addEventListener("click", async () => {
+      try {
+        if (document.body.classList.contains("admin") && !document.body.classList.contains("editing")) syncEditorFromPreview();
+        const title = document.getElementById("postTitle").value.trim() || "축산뉴스 모니터링";
+        const html = document.getElementById("htmlEditor").value || defaultHtml;
+        await savePost({ title, html });
+        document.getElementById("previewTitle").textContent = title;
+        renderPreview(html, true);
+        setStatus(db ? "Supabase에 게시 저장했습니다." : "로컬 테스트 저장 완료. Supabase 연결 전에는 내 브라우저에서만 보입니다.", "ok");
+      } catch (error) {
+        setStatus(`게시 저장 실패: ${error.message}`, "err");
+      }
+    });
+
+    if (db) {
+      document.getElementById("storageNotice").innerHTML = "현재 <strong>Supabase 공용 저장</strong>으로 작동합니다. 게시 저장 시 다른 사용자도 같은 최신 뉴스를 봅니다.";
+    }
+
+    refreshFromStorage().catch((error) => {
+      renderPreview(defaultHtml, false);
+      setStatus(`초기 로드 실패: ${error.message}`, "err");
+    });
+  </script>
+</body>
+</html>
